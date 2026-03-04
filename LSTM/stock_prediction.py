@@ -621,7 +621,7 @@ def plot_feature_importance(xgb_model, lgbm_model, feature_cols, top_n=20):
 
 def predict_future(df, lstm_model, xgb_model, lgbm_model, meta_model,
                    feature_cols, feature_scaler, target_scaler,
-                   sequence_length=60):
+                   sequence_length=60, forecast_horizon=63):
     """Predict future price using most recent data."""
     device = next(lstm_model.parameters()).device
 
@@ -647,17 +647,23 @@ def predict_future(df, lstm_model, xgb_model, lgbm_model, meta_model,
     meta_features = np.array([[lstm_pred, lgbm_pred, xgb_pred]])
     ensemble = meta_model.predict(meta_features)[0]
 
-    current_price = df['Close'].iloc[-1]
-    predicted_price = current_price * (1 + ensemble)
+    last_price = df['Close'].iloc[-1]
+    last_date = df['Date'].iloc[-1]
+    predicted_price = last_price * (1 + ensemble)
+
+    # Calculate target date from the last date in the dataset
+    future_dates = pd.bdate_range(start=last_date + pd.Timedelta(days=1), periods=forecast_horizon)
+    target_date = future_dates[-1]
 
     return {
-        'current_price': current_price,
+        'last_price': last_price,
         'predicted_return': ensemble,
         'predicted_price': predicted_price,
         'lstm_return': lstm_pred,
         'xgb_return': xgb_pred,
         'lgbm_return': lgbm_pred,
-        'current_date': df['Date'].iloc[-1],
+        'last_date': last_date,
+        'target_date': target_date,
     }
 
 
@@ -733,16 +739,18 @@ def run_pipeline(csv_path='stock_data.csv', forecast_horizon=63, sequence_length
     print("FUTURE PREDICTION")
     print(f"{'='*65}")
     result = predict_future(df, lstm_model, xgb_model, lgbm_model, meta_model,
-                            feature_cols, feature_scaler, target_scaler, sequence_length)
-    print(f"  Current Date:     {result['current_date']}")
-    print(f"  Current Price:    ${result['current_price']:.2f}")
-    print(f"  Horizon:          {forecast_horizon} trading days")
-    print(f"  LSTM Return:      {result['lstm_return']:.2%}")
-    print(f"  XGBoost Return:   {result['xgb_return']:.2%}")
+                            feature_cols, feature_scaler, target_scaler,
+                            sequence_length, forecast_horizon)
+    print(f"  Last Date in Data:  {result['last_date'].strftime('%Y-%m-%d')}")
+    print(f"  Last Price:         ${result['last_price']:.2f}")
+    print(f"  Horizon:            {forecast_horizon} trading days")
+    print(f"  Target Date:        {result['target_date'].strftime('%Y-%m-%d')}")
+    print(f"  LSTM Return:        {result['lstm_return']:.2%}")
+    print(f"  XGBoost Return:     {result['xgb_return']:.2%}")
     if HAS_LGBM:
-        print(f"  LightGBM Return:  {result['lgbm_return']:.2%}")
-    print(f"  Ensemble Return:  {result['predicted_return']:.2%}")
-    print(f"  Predicted Price:  ${result['predicted_price']:.2f}")
+        print(f"  LightGBM Return:    {result['lgbm_return']:.2%}")
+    print(f"  Ensemble Return:    {result['predicted_return']:.2%}")
+    print(f"  Predicted Price:    ${result['predicted_price']:.2f}")
     print(f"{'='*65}")
 
     return {
