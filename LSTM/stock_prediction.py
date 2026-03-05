@@ -742,7 +742,7 @@ def run_pipeline(csv_path='stock_data.csv', forecast_horizon=63, sequence_length
                             feature_cols, feature_scaler, target_scaler,
                             sequence_length, forecast_horizon)
     print(f"  Last Date in Data:  {result['last_date'].strftime('%Y-%m-%d')}")
-    print(f"  Last Price:         ${result['last_price']:.2f}")
+    print(f"  Last Close Price:   ${result['last_price']:.2f}")
     print(f"  Horizon:            {forecast_horizon} trading days")
     print(f"  Target Date:        {result['target_date'].strftime('%Y-%m-%d')}")
     print(f"  LSTM Return:        {result['lstm_return']:.2%}")
@@ -801,7 +801,7 @@ def generate_sample_data(filename='stock_data.csv', n_days=1500):
 if __name__ == '__main__':
     import os
 
-    csv_file = '/Microsoft.csv'
+    csv_file = 'Microsoft.csv'
     if not os.path.exists(csv_file):
         print("No stock_data.csv found. Generating sample data...\n")
         generate_sample_data(csv_file)
